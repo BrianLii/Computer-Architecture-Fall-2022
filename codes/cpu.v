@@ -40,7 +40,7 @@ reg                 _o_d_MemWrite = 0;
 reg                 _o_finish = 0;
 
 reg [DATA_W-1:0] reg_file [31:0];
-reg [4:0] start_tmr = 30;
+reg [4:0] start_tmr = 7;
 reg [4:0] tmr = 0;
 
 initial begin
@@ -55,12 +55,11 @@ always@(posedge i_clk) begin
     end
     else begin 
         tmr = tmr + 1;
-        if (tmr == 10) begin
+        if (tmr == 7) begin
             tmr = 0;
         end 
     end
-    // $display("tmr: %d", tmr);
-
+    
     if (tmr == 3) begin
         inst = i_i_inst;
         opcode = inst[6:0];
