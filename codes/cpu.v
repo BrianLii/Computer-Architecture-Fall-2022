@@ -30,31 +30,31 @@ reg [4:0] rs2;
 reg [4:0] rd;
 reg [2:0] func3;
 
-reg                 _o_i_valid_addr = 1'b1;
-reg [ADDR_W-1:0]    _o_i_addr = 32'b0;
+reg                 _o_i_valid_addr = 1;
+reg [ADDR_W-1:0]    _o_i_addr = 0;
 reg [DATA_W-1:0]    _o_d_w_data;
 reg [ADDR_W-1:0]    _o_d_r_addr;
 reg [ADDR_W-1:0]    _o_d_w_addr;
-reg                 _o_d_MemRead = 1'b0;
-reg                 _o_d_MemWrite = 1'b0;
-reg                 _o_finish = 1'b0;
+reg                 _o_d_MemRead = 0;
+reg                 _o_d_MemWrite = 0;
+reg                 _o_finish = 0;
 
 reg [DATA_W-1:0] reg_file [31:0];
-reg [4:0] start_tmr = 5'd30;
-reg [4:0] tmr = 5'd0;
+reg [4:0] start_tmr = 30;
+reg [4:0] tmr = 0;
 
 initial begin
     for (i=0;i<=31;i=i+1)
-        reg_file[i] = 64'h00000000;
+        reg_file[i] = 0;
 end
 
 integer i;
 always@(posedge i_clk) begin
-    if (start_tmr > 5'd0) begin
-        start_tmr = start_tmr - 1'd1;
+    if (start_tmr > 0) begin
+        start_tmr = start_tmr - 1;
     end
     else begin 
-        tmr = tmr + 1'd1;
+        tmr = tmr + 1;
         if (tmr == 10) begin
             tmr = 0;
         end 
@@ -71,44 +71,44 @@ always@(posedge i_clk) begin
         rs2 = inst[24:20];
         rd = inst[11:7];
         func3 = inst[14:12];
-        inst_valid = 1'b1;
+        inst_valid = 1;
     end
 
     if (inst_valid && inst == 32'b11111111111111111111111111111111) begin
         // EOF
-        _o_finish = 1'b1;
+        _o_finish = 1;
     end
     else if (inst_valid && opcode == 7'b0000011) begin
         // LD
-        if (tmr == 5'd3) begin
-            if (rd == 5'b0) begin
-                inst_valid = 1'b0;
-                _o_i_addr = _o_i_addr + 1'b1;
+        if (tmr == 3) begin
+            if (rd == 0) begin
+                inst_valid = 0;
+                _o_i_addr = _o_i_addr + 4;
             end
             else begin
                 _o_d_r_addr = reg_file[rs1] + I_imm;
-                _o_d_MemRead = 1'b1;
+                _o_d_MemRead = 1;
             end
         end
-        else if (tmr == 5'd5) begin
+        else if (tmr == 6) begin
             reg_file[rd] = i_d_data;
-            inst_valid = 1'b0;
-            _o_i_addr = _o_i_addr + 2'b10;
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
         end
     end
     else if (inst_valid && opcode == 7'b0100011) begin
         // SD
-        if (tmr == 5'd3) begin
+        if (tmr == 3) begin
             _o_d_w_addr = reg_file[rs1] + S_imm;
             _o_d_w_data = reg_file[rs2];
-            _o_d_MemWrite = 1'b1;
+            _o_d_MemWrite = 1;
         end
-        else if (tmr == 5'd4) begin
-            _o_d_MemWrite = 1'b0;
+        else if (tmr == 4) begin
+            _o_d_MemWrite = 0;
         end
-        else if (tmr == 5'd5) begin
-            inst_valid = 1'b0;
-            _o_i_addr = _o_i_addr + 2'b10;
+        else if (tmr == 5) begin
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
         end
     end
     else if (inst_valid && opcode == 7'b1100011 && func3 == 3'b000) begin
@@ -117,9 +117,9 @@ always@(posedge i_clk) begin
             _o_i_addr = _o_i_addr + SB_imm;
         end
         else begin
-            _o_i_addr = _o_i_addr + 2'b10;
+            _o_i_addr = _o_i_addr + 4;
         end
-        inst_valid = 1'b0;
+        inst_valid = 0;
     end
     else if (inst_valid && opcode == 7'b1100011 && func3 == 3'b001) begin
         // BNE
@@ -127,12 +127,12 @@ always@(posedge i_clk) begin
             _o_i_addr = _o_i_addr + SB_imm;
         end
         else begin
-            _o_i_addr = _o_i_addr + 2'b10;
+            _o_i_addr = _o_i_addr + 4;
         end
-        inst_valid = 1'b0;
+        inst_valid = 0;
     end
     else if (inst_valid) begin
-        if (rd != 5'b0) begin
+        if (rd != 0) begin
             if (opcode == 7'b0010011 && func3 == 3'b000) begin
                 // ADDI
                 reg_file[rd] = reg_file[rs1] + I_imm;
@@ -178,8 +178,8 @@ always@(posedge i_clk) begin
                 reg_file[rd] = reg_file[rs1] & reg_file[rs2];
             end
         end
-        inst_valid = 1'b0;
-        _o_i_addr = _o_i_addr + 2'b10;
+        inst_valid = 0;
+        _o_i_addr = _o_i_addr + 4;
     end
 end
 
