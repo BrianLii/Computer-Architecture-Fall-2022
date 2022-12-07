@@ -89,6 +89,9 @@ always@(posedge i_clk) begin
                 _o_d_MemRead = 1;
             end
         end
+        else if (tmr == 4) begin
+            _o_d_MemRead = 0;
+        end
         else if (tmr == 6) begin
             reg_file[rd] = i_d_data;
             inst_valid = 0;
