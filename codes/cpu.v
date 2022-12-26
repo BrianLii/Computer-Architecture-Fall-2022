@@ -40,26 +40,40 @@ reg                 _o_d_MemWrite = 0;
 reg                 _o_finish = 0;
 
 reg [DATA_W-1:0] reg_file [31:0];
-reg [4:0] start_tmr = 7;
-reg [4:0] tmr = 0;
+reg [2:0] tmr = 7;
 
 initial begin
     for (i=0;i<=31;i=i+1)
         reg_file[i] = 0;
 end
 
+reg sA = 0;
+reg sB = 0;
 integer i;
+
+always@(posedge i_rst_n or negedge i_rst_n) begin
+    if (i_rst_n) begin
+        sA = 1;
+    end
+    else begin
+        sB = 1;
+        sA = 0;
+    end
+end
+
 always@(posedge i_clk) begin
-    if (start_tmr > 0) begin
-        start_tmr = start_tmr - 1;
-    end
-    else begin 
-        tmr = tmr + 1;
-        if (tmr == 7) begin
-            tmr = 0;
-        end 
-    end
-    
+    case (tmr)
+        0: tmr = 1;
+        1: tmr = 2;
+        2: tmr = 3;
+        3: tmr = 4;
+        4: tmr = 5;
+        5: tmr = 6;
+        6: tmr = 7;
+        7: tmr = (sA && sB) ? 0 : 7;
+        default: tmr = 0;
+    endcase
+
     if (tmr == 3) begin
         inst = i_i_inst;
         opcode = inst[6:0];
@@ -73,116 +87,128 @@ always@(posedge i_clk) begin
         inst_valid = 1;
     end
 
-    if (inst_valid && inst == 32'b11111111111111111111111111111111) begin
-        // EOF
-        _o_finish = 1;
-    end
-    else if (inst_valid && opcode == 7'b0000011) begin
-        // LD
-        if (tmr == 3) begin
-            if (rd == 0) begin
+    casez({inst_valid,opcode,func3,inst[30]})
+        {1'b1,7'b1111111,3'b???,1'b?}: begin
+            // EOF
+            _o_finish = 1;
+        end
+        {1'b1,7'b0000011,3'b???,1'b?}: begin
+            // LD
+            if (tmr == 3) begin
+                _o_d_r_addr = {{reg_file[rs1][63:10]}, {reg_file[rs1][9:0]} + {I_imm[9:0]}};
+                _o_d_MemRead = 1;
+            end
+            else if (tmr == 4) begin
+                _o_d_MemRead = 0;
+            end
+            else if (tmr == 6) begin
+                reg_file[rd] = i_d_data;
+                inst_valid = 0;
+                _o_i_addr = {{_o_i_addr[63:8]}, {_o_i_addr[7:0]} + 8'd4};
+            end
+        end
+        {1'b1,7'b0100011,3'b???,1'b?}: begin
+            // SD
+            if (tmr == 3) begin
+                _o_d_w_addr = reg_file[rs1] + S_imm;
+                _o_d_w_data = reg_file[rs2];
+                _o_d_MemWrite = 1;
+            end
+            else if (tmr == 4) begin
+                _o_d_MemWrite = 0;
+            end
+            else if (tmr == 5) begin
                 inst_valid = 0;
                 _o_i_addr = _o_i_addr + 4;
             end
+        end
+        {1'b1,7'b1100011,3'b000,1'b?}: begin
+            // BEQ
+            if (reg_file[rs1] == reg_file[rs2]) begin
+                _o_i_addr = _o_i_addr + SB_imm;
+            end
             else begin
-                _o_d_r_addr = reg_file[rs1] + I_imm;
-                _o_d_MemRead = 1;
+                _o_i_addr = _o_i_addr + 4;
             end
+            inst_valid = 0;
         end
-        else if (tmr == 4) begin
-            _o_d_MemRead = 0;
+        {1'b1,7'b1100011,3'b001,1'b?}: begin
+            // BNE
+            if (reg_file[rs1] != reg_file[rs2]) begin
+                _o_i_addr = _o_i_addr + SB_imm;
+            end
+            else begin
+                _o_i_addr = _o_i_addr + 4;
+            end
+            inst_valid = 0;
         end
-        else if (tmr == 6) begin
-            reg_file[rd] = i_d_data;
+        {1'b1,7'b0010011,3'b000,1'b?}: begin
+            // ADDI
+            reg_file[rd] = reg_file[rs1] + I_imm;
             inst_valid = 0;
             _o_i_addr = _o_i_addr + 4;
         end
-    end
-    else if (inst_valid && opcode == 7'b0100011) begin
-        // SD
-        if (tmr == 3) begin
-            _o_d_w_addr = reg_file[rs1] + S_imm;
-            _o_d_w_data = reg_file[rs2];
-            _o_d_MemWrite = 1;
-        end
-        else if (tmr == 4) begin
-            _o_d_MemWrite = 0;
-        end
-        else if (tmr == 5) begin
+        {1'b1,7'b0010011,3'b100,1'b?}: begin
+            // XORI
+            reg_file[rd] = reg_file[rs1] ^ I_imm;
             inst_valid = 0;
             _o_i_addr = _o_i_addr + 4;
         end
-    end
-    else if (inst_valid && opcode == 7'b1100011 && func3 == 3'b000) begin
-        // BEQ
-        if (reg_file[rs1] == reg_file[rs2]) begin
-            _o_i_addr = _o_i_addr + SB_imm;
-        end
-        else begin
+        {1'b1,7'b0010011,3'b110,1'b?}: begin
+            // ORI
+            reg_file[rd] = reg_file[rs1] | I_imm;
+            inst_valid = 0;
             _o_i_addr = _o_i_addr + 4;
         end
-        inst_valid = 0;
-    end
-    else if (inst_valid && opcode == 7'b1100011 && func3 == 3'b001) begin
-        // BNE
-        if (reg_file[rs1] != reg_file[rs2]) begin
-            _o_i_addr = _o_i_addr + SB_imm;
-        end
-        else begin
+        {1'b1,7'b0010011,3'b111,1'b?}: begin
+            // ANDI
+            reg_file[rd] = reg_file[rs1] & I_imm;
+            inst_valid = 0;
             _o_i_addr = _o_i_addr + 4;
         end
-        inst_valid = 0;
-    end
-    else if (inst_valid) begin
-        if (rd != 0) begin
-            if (opcode == 7'b0010011 && func3 == 3'b000) begin
-                // ADDI
-                reg_file[rd] = reg_file[rs1] + I_imm;
-            end
-            else if (opcode == 7'b0010011 && func3 == 3'b100) begin
-                // XORI
-                reg_file[rd] = reg_file[rs1] ^ I_imm;
-            end
-            else if (opcode == 7'b0010011 && func3 == 3'b110) begin
-                // ORI
-                reg_file[rd] = reg_file[rs1] | I_imm;
-            end
-            else if (opcode == 7'b0010011 && func3 == 3'b111) begin
-                // ANDI
-                reg_file[rd] = reg_file[rs1] & I_imm;
-            end
-            else if (opcode == 7'b0010011 && func3 == 3'b001) begin
-                // SLLI
-                reg_file[rd] = reg_file[rs1] << I_imm;
-            end
-            else if (opcode == 7'b0010011 && func3 == 3'b101) begin
-                // SRLI
-                reg_file[rd] = reg_file[rs1] >> I_imm;
-            end
-            else if (opcode == 7'b0110011 && func3 == 3'b000 && inst[31:25] == 7'b0000000) begin
-                // ADD
-                reg_file[rd] = reg_file[rs1] + reg_file[rs2];
-            end
-            else if (opcode == 7'b0110011 && func3 == 3'b000 && inst[31:25] == 7'b0100000) begin
-                // SUB
-                reg_file[rd] = reg_file[rs1] - reg_file[rs2];
-            end
-            else if (opcode == 7'b0110011 && func3 == 3'b100) begin
-                // XOR
-                reg_file[rd] = reg_file[rs1] ^ reg_file[rs2];
-            end
-            else if (opcode == 7'b0110011 && func3 == 3'b110) begin
-                //OR
-                reg_file[rd] = reg_file[rs1] | reg_file[rs2];
-            end
-            else if (opcode == 7'b0110011 && func3 == 3'b111) begin
-                // AND
-                reg_file[rd] = reg_file[rs1] & reg_file[rs2];
-            end
+        {1'b1,7'b0010011,3'b001,1'b?}: begin
+            // SLLI
+            reg_file[rd] = reg_file[rs1] << I_imm;
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
         end
-        inst_valid = 0;
-        _o_i_addr = _o_i_addr + 4;
-    end
+        {1'b1,7'b0010011,3'b101,1'b?}: begin
+            // SRLI
+            reg_file[rd] = reg_file[rs1] >> I_imm;
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+        {1'b1,7'b0110011,3'b000,1'b0}: begin
+            // ADD
+            reg_file[rd] = reg_file[rs1] + reg_file[rs2];
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+        {1'b1,7'b0110011,3'b000,1'b1}: begin
+            // SUB
+            reg_file[rd] = reg_file[rs1] - reg_file[rs2];
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+        {1'b1,7'b0110011,3'b100,1'b?}: begin
+            // XOR
+            reg_file[rd] = reg_file[rs1] ^ reg_file[rs2];
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+        {1'b1,7'b0110011,3'b110,1'b?}: begin
+            //OR
+            reg_file[rd] = reg_file[rs1] | reg_file[rs2];
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+        {1'b1,7'b0110011,3'b111,1'b?}: begin
+            // AND
+            reg_file[rd] = reg_file[rs1] & reg_file[rs2];
+            inst_valid = 0;
+            _o_i_addr = _o_i_addr + 4;
+        end
+    endcase
 end
 
 assign o_i_valid_addr   = _o_i_valid_addr;
