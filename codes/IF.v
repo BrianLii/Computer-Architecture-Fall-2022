@@ -4,6 +4,9 @@ module IF(
     input               i_i_valid_inst, // from instruction memory
     input [31:0]        i_i_inst,       // from instruction memory
     input               i_EX0_inst_finish,
+    input               i_EX3_inst_finish,
+    input               i_EX0_jmp_valid,
+    input [63:0]        i_EX0_jmp_addr,
 
     output reg          o_i_valid_addr, // to instruction memory
     output reg [63:0]   o_i_addr,       // to instruction memory
@@ -12,9 +15,13 @@ module IF(
     output reg [63:0]   o_inst_addr
 );
 
-reg i_i_valid_inst_r, i_i_valid_inst_w;
-reg [31:0] i_i_inst_r, i_i_inst_w;
-reg i_EX0_inst_finish_r, i_EX0_inst_finish_w;
+reg             i_i_valid_inst_r,i_i_valid_inst_w;
+reg [31:0]      i_i_inst_r,i_i_inst_w;
+reg             i_EX0_inst_finish_r,i_EX0_inst_finish_w;
+reg             i_EX3_inst_finish_r,i_EX3_inst_finish_w;
+reg             i_EX0_jmp_valid_r,i_EX0_jmp_valid_w;
+reg [63:0]      i_EX0_jmp_addr_r,i_EX0_jmp_addr_w;
+
 reg t1_r, t1_w;
 reg t2_r, t2_w;
 reg t3_r, t3_w;
@@ -38,8 +45,12 @@ end
 reg first_tick = 1;
 always@(posedge i_clk or negedge i_rst_n) begin
     if (~i_rst_n) begin
-        i_i_valid_inst_r    = 0;
-        i_i_inst_r          = 0;
+        i_i_valid_inst_r        = 0;
+        i_i_inst_r              = 0;
+        i_EX0_inst_finish_r     = 0;
+        i_EX3_inst_finish_r     = 0;
+        i_EX0_jmp_valid_r       = 0;
+        i_EX0_jmp_addr_r        = 0;
         t1_r                = 0;
         t2_r                = 0;
         t3_r                = 0;
@@ -48,8 +59,12 @@ always@(posedge i_clk or negedge i_rst_n) begin
     end
     else if (first_tick) begin
         first_tick = 0;
-        i_i_valid_inst_r    = 0;
-        i_i_inst_r          = 0;
+        i_i_valid_inst_r        = 0;
+        i_i_inst_r              = 0;
+        i_EX0_inst_finish_r     = 0;
+        i_EX3_inst_finish_r     = 0;
+        i_EX0_jmp_valid_r       = 0;
+        i_EX0_jmp_addr_r        = 0;
         t1_r                = 0;
         t2_r                = 0;
         t3_r                = 0;
@@ -58,9 +73,12 @@ always@(posedge i_clk or negedge i_rst_n) begin
         running_r           = 0;
     end
     else begin
-        i_i_valid_inst_r    = i_i_valid_inst_w;
-        i_i_inst_r          = i_i_inst_w;
-        i_EX0_inst_finish_r = i_EX0_inst_finish_w;
+        i_i_valid_inst_r        = i_i_valid_inst_w;
+        i_i_inst_r              = i_i_inst_w;
+        i_EX0_inst_finish_r     = i_EX0_inst_finish_w;
+        i_EX3_inst_finish_r     = i_EX3_inst_finish_w;
+        i_EX0_jmp_valid_r       = i_EX0_jmp_valid_w;
+        i_EX0_jmp_addr_r        = i_EX0_jmp_addr_w;
         t1_r                = t1_w;
         t2_r                = t2_w;
         t3_r                = t3_w;
@@ -75,6 +93,9 @@ always @(*) begin
     i_i_valid_inst_w = i_i_valid_inst;
     i_i_inst_w = i_i_inst;
     i_EX0_inst_finish_w = i_EX0_inst_finish;
+    i_EX3_inst_finish_w = i_EX3_inst_finish;
+    i_EX0_jmp_valid_w = i_EX0_jmp_valid;
+    i_EX0_jmp_addr_w = i_EX0_jmp_addr;
 end
 
 reg [63:0] pc = 0;
@@ -96,8 +117,13 @@ always@(*) begin
         o_inst_addr = pc;
     end
 
-    if (i_EX0_inst_finish_r) begin
-        pc = {pc[63:8], pc[7:0] + 8'd4};
+    if (i_EX0_inst_finish_r || i_EX3_inst_finish_r) begin
+        if (i_EX0_jmp_valid_r) begin
+            pc = i_EX0_jmp_addr_r;
+        end
+        else begin
+            pc = {pc[63:8], pc[7:0] + 8'd4};
+        end
         t1_w = 1;
     end
 end
