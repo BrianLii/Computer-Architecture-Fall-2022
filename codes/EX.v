@@ -148,7 +148,7 @@ always@(*) begin
                 {o_carry,o_C[15:0]} = o_A[15:0] + o_B[15:0];
             end
             {7'b0010011,3'b100,1'b?}: begin
-                // diplay("XORI");
+                // display("XORI");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -156,7 +156,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0010011,3'b110,1'b?}: begin
-                // diplay("ORI");
+                // display("ORI");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -164,7 +164,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0010011,3'b111,1'b?}: begin
-                // diplay("ANDI");
+                // display("ANDI");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -172,7 +172,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0010011,3'b001,1'b?}: begin
-                // diplay("SLLI");
+                // display("SLLI");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -180,7 +180,7 @@ always@(*) begin
                 o_inst_finish = 1;               
             end
             {7'b0010011,3'b101,1'b?}: begin
-                // diplay("SRLI");
+                // display("SRLI");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -188,7 +188,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0110011,3'b000,1'b0}: begin
-                // diplay("ADD");
+                // display("ADD");
                 o_inst_valid = 1;
                 o_A = i_rs1_value_r;
                 o_B = i_rs2_value_r;
@@ -197,7 +197,7 @@ always@(*) begin
                 {o_carry,o_C[15:0]} = o_A[15:0] + o_B[15:0];
             end
             {7'b0110011,3'b000,1'b1}: begin
-                // diplay("SUB");
+                // display("SUB");
                 o_inst_valid = 1;
                 o_A = i_rs1_value_r;
                 o_B = ~i_rs2_value_r;
@@ -206,7 +206,7 @@ always@(*) begin
                 {o_carry,o_C[15:0]} = o_A[15:0] + o_B[15:0] + 1;
             end
             {7'b0110011,3'b100,1'b?}: begin
-                // diplay("XOR");
+                // display("XOR");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -214,7 +214,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0110011,3'b110,1'b?}: begin
-                // diplay("OR");
+                // display("OR");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
@@ -222,7 +222,7 @@ always@(*) begin
                 o_inst_finish = 1;
             end
             {7'b0110011,3'b111,1'b?}: begin
-                // diplay("AND");
+                // display("AND");
                 o_inst_valid = 0;
                 o_wb_valid = 1;
                 o_wb_rd = rd;
