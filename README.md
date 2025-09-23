@@ -13,7 +13,7 @@ Example synthesis results (`make time`):
 
 ## Features
 
-* Implements a 5-stage pipelined CPU (IF, ID, EX, MEM, WB).
+* Implements a 8-stage pipelined CPU (IF, ID[0,1,2,3], EX, MEM, WB).
 * Handles **data hazards** and **control hazards**.
 * Supports the required instruction subset.
 * Synthesized and tested with **Yosys** and the **FreePDK 45nm** standard cell library.
